@@ -1,2 +1,2 @@
-# typescript-discord-template
-Base setup for Discord bot in TypeScript
+# wsn-discord
+Custom Discord bot for the Whitter Solidarity Network
