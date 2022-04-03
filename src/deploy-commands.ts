@@ -1,8 +1,8 @@
 import { REST } from "@discordjs/rest";
 import { Routes } from "discord-api-types/v9";
-import { APP_ID, BOT_TOKEN } from './config.json';
 import fs from "node:fs";
 import path from "node:path";
+import { BOT_TOKEN, APP_ID } from "./config.json";
 
 export const deployCommands = async () => {
 	try {
@@ -25,4 +25,4 @@ export const deployCommands = async () => {
 	}
 }
 
-deployCommands();
+//deployCommands();
