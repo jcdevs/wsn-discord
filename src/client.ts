@@ -18,7 +18,7 @@ client.on('interactionCreate', async interaction => {
 	if (!command) return;
 
 	try {
-		console.info(`Received command ${interaction.commandName} from user ${interaction.user.username}#${interaction.user.discriminator} with options: \n`, interaction.options);
+		console.info(`Received command ${interaction.commandName} from user ${interaction.user.tag} with options: \n`, interaction.options);
 		await command.execute(interaction);
 	} catch(e) {
 		console.error(e);
@@ -41,8 +41,13 @@ client.on('messageCreate', message => {
 	if (destinationId) {
 		const destinationChannel = client.channels.cache.get(destinationId);
 		if (destinationChannel?.isText()) {
-			const { content, embeds } = message;
-			destinationChannel.send({ content, embeds });
+			const { author, content, createdAt, embeds } = message;
+			const authorLine = `${author} ${createdAt.toLocaleDateString()}, ${createdAt.toLocaleTimeString()}`;
+			destinationChannel.send({
+				content: `${authorLine}\n${content}`,
+				embeds,
+				allowedMentions: { parse: [] }
+			});
 		}
 	}
 });
