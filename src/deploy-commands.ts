@@ -18,7 +18,7 @@ export const deployCommands = async () => {
 		const rest = new REST({ version: '9' }).setToken(BOT_TOKEN);
 
 		await rest.put(Routes.applicationCommands(APP_ID), { body: commands })
-			.then(() => console.log('Successfully registered application commands.'))
+			.then(() => console.log('Successfully deployed application commands.'))
 			.catch(console.error);
 	} catch(e) {
 		console.error("deployCommands -- ", e);

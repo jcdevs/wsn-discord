@@ -1,6 +1,7 @@
 import { Client, Intents } from "discord.js";
 import commands from "./commands";
 import autodeleteIntervals from "./data/autodelete-intervals";
+import autoforwardSettings from "./data/autoforwarding-settings";
 
 const client = new Client({
   intents: [
@@ -17,6 +18,7 @@ client.on('interactionCreate', async interaction => {
 	if (!command) return;
 
 	try {
+		console.info(`Received command ${interaction.commandName} from user ${interaction.user.username}#${interaction.user.discriminator} with options: \n`, interaction.options);
 		await command.execute(interaction);
 	} catch(e) {
 		console.error(e);
@@ -25,13 +27,24 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.on('messageCreate', message => {
+	const { channelId } = message;
   // set autodeletion timer
-  const seconds = autodeleteIntervals.get(message.channelId);
-  if (seconds && !message.author.bot && message.deletable) {
+  const seconds = autodeleteIntervals.get(channelId);
+  if (seconds && message.author.id !== client.user?.id && message.deletable) {
     setTimeout(() => {
       message.delete().catch(err => console.error("Failed to delete message: ", err));
     }, seconds*1000);
   }
+
+	// check autoforwarding
+	const destinationId = autoforwardSettings.get(channelId);
+	if (destinationId) {
+		const destinationChannel = client.channels.cache.get(destinationId);
+		if (destinationChannel?.isText()) {
+			const { content, embeds } = message;
+			destinationChannel.send({ content, embeds });
+		}
+	}
 });
 
 export default client;

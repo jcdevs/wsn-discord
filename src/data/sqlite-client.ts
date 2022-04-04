@@ -26,4 +26,19 @@ db.run(`
     }
 });
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS
+  autoforwardSettings (
+    serverId TEXT NOT NULL,
+    sourceId TEXT NOT NULL,
+    destinationId NOT NULL,
+    PRIMARY KEY(sourceId, destinationId)
+  )`, err => {
+    if (err) {
+      console.error("Failed to create autoforwardSettings table: ", err);
+    } else {
+      console.info("Successfully created table autoforwardSettings");
+    }
+});
+
 export default db;

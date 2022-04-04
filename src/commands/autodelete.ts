@@ -17,11 +17,14 @@ module.exports = {
 		.addIntegerOption(option => {
 			option
 			.setName("seconds")
-			.setDescription("The interval in seconds. Pass 0 to turn autodeletion off for the given channel.")
+			.setDescription("The interval in seconds. Pass 0 to disable autodeletion for the given channel.")
 			.setRequired(true);
 			return option;
 		}),
 	async execute(interaction: CommandInteraction) {
+		if (!interaction.memberPermissions?.has("ADMINISTRATOR", true)) {
+			return;
+		}
 		const { guildId } = interaction;
 		const channel = interaction.options.getChannel('channel');
 		const seconds = interaction.options.getInteger('seconds');
@@ -32,7 +35,7 @@ module.exports = {
 				err => {
 					if (err) {
 						console.error('Failed to delete autodelete settings: ', err);
-						interaction.reply(`Failed to remove autodeletion settings for #${channel.name}`)
+						interaction.reply(`Failed to remove autodeletion settings for #${channel.name}`);
 					} else {
 						autodeleteIntervals.delete(channel.id);
 						interaction.reply(`Removed autodeletion settings for #${channel.name}`);
@@ -48,7 +51,7 @@ module.exports = {
 			}, err => {
 				if (err) {
 					console.error('Failed to upsert autodelete settings: ', err);
-					interaction.reply(`Failed to configure autodeletion for #${channel.name}`)
+					interaction.reply(`Failed to configure autodeletion for #${channel.name}`);
 				} else {
 					interaction.reply(`Configured #${channel.name} for autodeletion on a ${seconds} second interval.`)
 						.then(() => {
