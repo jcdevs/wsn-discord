@@ -1,5 +1,5 @@
 # wsn-discord
-Custom Discord bot for the Whitter Solidarity Network
+Custom Discord bot for the Whittier Solidarity Network
 
 ## dependencies
 Requires Node.js and Discord application credentials.
