@@ -2,6 +2,7 @@ import { Client, Intents } from "discord.js";
 import commands from "./commands";
 import autodeleteIntervals from "./data/autodelete-intervals";
 import autoforwardSettings from "./data/autoforwarding-settings";
+import { recordLastActivityTimestamp } from "./data/queries";
 
 const client = new Client({
   intents: [
@@ -42,13 +43,23 @@ client.on('messageCreate', message => {
 		const destinationChannel = client.channels.cache.get(destinationId);
 		if (destinationChannel?.isText()) {
 			const { author, content, createdAt, embeds } = message;
-			const authorLine = `${author} ${createdAt.toLocaleDateString()}, ${createdAt.toLocaleTimeString()}`;
+			const time = `${createdAt.toLocaleDateString()}, ${createdAt.toLocaleTimeString()}`;
+			const sourceChannel = client.channels.cache.get(channelId);
+			// "all" channel: 960973215923068978
+			const tag = sourceChannel?.id == '960973215923068978' ? '@everyone\n' : '';
+			// ‎ is an empty character that Discord's formatting won't trim
+			const body = `‎\n${tag}${time} in ${sourceChannel}\n${author} - ${content}`;
 			destinationChannel.send({
-				content: `${authorLine}\n${content}`,
+				content: body,
 				embeds,
-				allowedMentions: { parse: [] }
+				allowedMentions: { parse: tag ? ['everyone'] : [] } // Prevents mentions from pinging
 			});
 		}
+	}
+
+	// record last activity times
+	if (!message.author.bot && message.guildId) {
+		recordLastActivityTimestamp(message.author.id, message.guildId, message.createdTimestamp);
 	}
 });
 

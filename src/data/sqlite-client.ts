@@ -41,4 +41,18 @@ db.run(`
     }
 });
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS
+  usersLastActivity (
+    userId TEXT NOT NULL,
+    serverId TEXT NOT NULL,
+    epoch INT NOT NULL,
+    PRIMARY KEY(userId, serverId) 
+  )
+`, err => {
+  if (err) {
+    console.error("Failed to create usersLastActivity table: ", err);
+  }
+});
+
 export default db;
