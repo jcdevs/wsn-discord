@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { CommandInteraction } from "discord.js";
-import autodeleteIntervals from "../data/autodelete-intervals";
-import db from "../data/sqlite-client";
+import AutodeleteSetting from "../data/models/AutodeleteSetting";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -30,35 +29,29 @@ module.exports = {
 		const seconds = interaction.options.getInteger('seconds');
 
 		if (channel && seconds === 0) {
-			db.run(`DELETE FROM autodeleteSettings WHERE channelId = :channelId`,
-				{ ":channelId": channel.id },
-				err => {
-					if (err) {
-						console.error('Failed to delete autodelete settings: ', err);
-						interaction.reply(`Failed to remove autodeletion settings for #${channel.name}`);
-					} else {
-						autodeleteIntervals.delete(channel.id);
-						interaction.reply(`Removed autodeletion settings for #${channel.name}`);
+			try {
+				await AutodeleteSetting.destroy({
+					where: {
+						channelId: channel.id,	
 					}
-				}
-			);
+				});
+				interaction.reply(`Removed autodeletion settings for #${channel.name}`);
+			} catch(e) {
+				console.error('Failed to delete autodelete settings: ', e);
+				interaction.reply(`Failed to remove autodeletion settings for #${channel.name}`);
+			}
 		} else if (channel && seconds) {
-			db.run(`INSERT INTO autodeleteSettings (serverId, channelId, seconds) VALUES (:serverId, :channelId, :seconds)
-				ON CONFLICT (channelId) DO UPDATE SET seconds = excluded.seconds`, {
-					":serverId": guildId,
-					":channelId": channel,
-					":seconds": seconds
-			}, err => {
-				if (err) {
-					console.error('Failed to upsert autodelete settings: ', err);
-					interaction.reply(`Failed to configure autodeletion for #${channel.name}`);
-				} else {
-					interaction.reply(`Configured #${channel.name} for autodeletion on a ${seconds} second interval.`)
-						.then(() => {
-							autodeleteIntervals.set(channel.id, seconds);
-						});
-				}
-			});
+			try {
+				await AutodeleteSetting.upsert({
+					serverId: guildId,
+					channelId: channel.id,
+					seconds,
+				});
+				interaction.reply(`Configured #${channel.name} for autodeletion on a ${seconds} second interval.`);
+			} catch(e) {
+				console.error('Failed to upsert autodelete settings: ', e);
+				interaction.reply(`Failed to configure autodeletion for #${channel.name}`);
+			}
 		}
 	},
 };

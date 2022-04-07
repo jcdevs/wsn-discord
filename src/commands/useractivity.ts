@@ -1,6 +1,7 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { CommandInteraction } from "discord.js";
-import db from "../data/sqlite-client";
+import { Op } from "sequelize";
+import UsersLastActivity from "../data/models/UsersLastActivity";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -38,38 +39,41 @@ module.exports = {
 		}
 
 		const epoch = Date.now() - days*24*60*60*1000;
+
 		if (direction === 'active') {
-			db.all(`SELECT userId FROM usersLastActivity WHERE epoch > :epoch`, {
-				':epoch': epoch
-			}, (err, rows) => {
-				if (err) {
-					console.error(`Failed to get active users: `, err);
-					interaction.reply(`Failed to query active users`);
-				} else {
-					const mentions = rows.map(row => `<@${row.userId}>`);
-					const content = `Users active within the last ${days} days:\n${mentions.length ? mentions.join("\n") : 'None!'}`;
-					interaction.reply({
-						content,
-						allowedMentions: { parse: [] } // Prevents mentions from pinging
-					});
-				}
-			});
+			try {
+				const results = await UsersLastActivity.findAll({
+					where: {
+						epoch: { [Op.gt]: epoch }
+					}
+				});
+				const mentions = results.map(result => `<@${result.userId}>`);
+				const content = `Users active within the last ${days} days:\n${mentions.length ? mentions.join("\n") : 'None!'}`;
+				interaction.reply({
+					content,
+					allowedMentions: { parse: [] } // Prevents mentions from pinging
+				});
+			} catch(e) {
+				console.error(`Failed to get active users: `, e);
+				interaction.reply(`Failed to query active users`);
+			}
 		} else if(direction === 'inactive') {
-			db.all(`SELECT userId FROM usersLastActivity WHERE epoch < :epoch`, {
-				':epoch': epoch
-			}, (err, rows) => {
-				if (err) {
-					console.error(`Failed to get inactive users: `, err);
-					interaction.reply(`Failed to query inactive users`);
-				} else {
-					const mentions = rows.map(row => `<@${row.userId}>`);
-					const content = `Users inactive within the last ${days} days:\n${mentions.length ? mentions.join("\n") : 'None!'}`;
-					interaction.reply({
-						content,
-						allowedMentions: { parse: [] } // Prevents mentions from pinging
-					});
-				}
-			});
+			try {
+				const results = await UsersLastActivity.findAll({
+					where: {
+						epoch: { [Op.lt]: epoch }
+					}
+				});
+				const mentions = results.map(result => `<@${result.userId}>`);
+				const content = `Users inactive within the last ${days} days:\n${mentions.length ? mentions.join("\n") : 'None!'}`;
+				interaction.reply({
+					content,
+					allowedMentions: { parse: [] } // Prevents mentions from pinging
+				});
+			} catch(e) {
+				console.error(`Failed to get inactive users: `, e);
+				interaction.reply(`Failed to query inactive users`);
+			}
 		}
 	},
 };
