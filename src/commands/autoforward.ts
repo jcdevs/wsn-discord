@@ -1,7 +1,6 @@
 import { SlashCommandBuilder } from "@discordjs/builders";
 import { CommandInteraction } from "discord.js";
-import autoforwardSettings from "../data/autoforwarding-settings";
-import db from "../data/sqlite-client";
+import AutoforwardSetting from "../data/models/AutoforwardSetting";
 
 module.exports = {
 	data: new SlashCommandBuilder()
@@ -31,32 +30,27 @@ module.exports = {
 
 		if (source && destination) {
 			if (source.id === destination.id) {
-				db.run(`DELETE FROM autoforwardSettings WHERE sourceId = :sourceId`, {
-					":sourceId": source.id
-				}, err => {
-					if (err) {
-						console.error('Failed to delete autoforward settings: ', err);
-						interaction.reply(`Failed to remove autodeletion settings for #${source.name}`);
-					} else {
-						autoforwardSettings.delete(source.id);
-						interaction.reply(`Removed autoforward settings for #${source.name}`);
-					}
-				});
+				try {
+					await AutoforwardSetting.destroy({
+						where: { sourceId: source.id }
+					});
+					interaction.reply(`Removed autoforward settings for #${source.name}`);
+				} catch(e) {
+					console.error('Failed to delete autoforward settings: ', e);
+					interaction.reply(`Failed to remove autodeletion settings for #${source.name}`);
+				}
 			} else {
-				db.run(`INSERT INTO autoforwardSettings (serverId, sourceId, destinationId) VALUES (:serverId, :source, :destination)
-					ON CONFLICT (sourceId, destinationId) DO UPDATE SET serverId = excluded.serverId, sourceId = excluded.sourceId, destinationId = excluded.destinationId`, {
-						":serverId": guildId,
-						":source": source.id,
-						":destination": destination.id
-				}, err => {
-					if (err) {
-						console.error('Failed to upsert autoforward settings: ', err);
-						interaction.reply(`Failed to configure autoforwarding from source #${source.name} to desination #${destination.name}`);
-					} else {
-						autoforwardSettings.set(source.id, destination.id);
-						interaction.reply(`Configured autoforwarding from source #${source.name} to destination #${destination.name}`);
-					}
-				});
+				try {
+					await AutoforwardSetting.upsert({
+						serverId: guildId,
+						sourceId: source.id,
+						destinationId: destination.id,
+					});
+					interaction.reply(`Configured autoforwarding from source #${source.name} to destination #${destination.name}`);
+				} catch(e) {
+					console.error('Failed to upsert autoforward settings: ', e);
+					interaction.reply(`Failed to configure autoforwarding from source #${source.name} to desination #${destination.name}`);
+				}
 			}
 		}
 	},
