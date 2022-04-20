@@ -1,7 +1,9 @@
-import { Client, Intents } from "discord.js";
+import { Client, Collection, Intents, TextBasedChannel } from "discord.js";
+import { Op } from "sequelize";
 import commands from "./commands";
 import AutodeleteSetting from "./data/models/AutodeleteSetting";
-import AutoforwardSetting from "./data/models/AutoforwardSetting";
+import AutoforwardRoleDestination from "./data/models/AutoforwardRoleDestination";
+import AutoforwardSource from "./data/models/AutoforwardSource";
 import UsersLastActivity from "./data/models/UsersLastActivity";
 
 const client = new Client({
@@ -46,23 +48,42 @@ client.on('messageCreate', async message => {
 
 	// check autoforwarding
 	try {
-		const setting = await AutoforwardSetting.findOne({
+		const setting = await AutoforwardSource.findOne({
 			where: { sourceId: channelId }
 		});
 		if (setting) {
-			const destinationChannel = client.channels.cache.get(setting.destinationId);
-			if (destinationChannel?.isText()) {
-				const { author, content, createdAt, embeds } = message;
-				const time = `${createdAt.toLocaleDateString()}, ${createdAt.toLocaleTimeString()}`;
-				const sourceChannel = client.channels.cache.get(channelId);
-				// "all" channel: 960973215923068978
-				const tag = sourceChannel?.id == '960973215923068978' ? '@everyone\n' : '';
-				// ‎ is an empty character that Discord's formatting won't trim
-				const body = `‎\n${tag}${time} in ${sourceChannel}\n${author} - ${content}`;
-				destinationChannel.send({
-					content: body,
-					embeds,
-					allowedMentions: { parse: tag ? ['everyone'] : [] } // Prevents mentions from pinging
+			let { channels } = message.mentions;
+
+			if (!channels.size) {
+				// default to the destination channels associated with author's roles if no channels were mentioned
+				const roles = message.member?.roles.cache;
+
+				if (roles) {
+					const authorRoleIds = [...roles.keys()];
+					const mappings = await AutoforwardRoleDestination.findAll({
+						where: { roleId: { [Op.in]: authorRoleIds } }
+					});
+					const channelIds = mappings.map(record => record.channelId);
+
+					channels = client.channels.cache.filter(chan => chan.type === 'GUILD_TEXT' && channelIds.includes(chan.id)) as Collection<string, TextBasedChannel> ;
+				}
+			}
+
+			if (channels.size) {
+				channels.each(channel => {
+					if (channel.id !== channelId) {
+						const { author, content, createdAt, embeds } = message;
+						const alertEmojis = `:rotating_light: :rotating_light: :rotating_light:`;
+						const time = `${createdAt.toLocaleDateString()}, ${createdAt.toLocaleTimeString()}`;
+						const tag = '@here';
+						// ‎ is an empty character that Discord's formatting won't trim
+						const body = `‎\n${alertEmojis}\n${time} ${tag}\n${author} - ${content}`;
+						channel.send({
+							content: body,
+							embeds,
+							allowedMentions: { parse: tag ? ['everyone'] : [] } // Prevents mentions from pinging
+						});
+					}
 				});
 			}
 		}

@@ -4,6 +4,7 @@
   "description": "Custom functionality for the Whittier Solidarity Network",
   "main": "dist/index.js",
   "scripts": {
+    "clean": "rm -r ./dist/*",
     "start": "tsc && node dist/index.js"
   },
   "author": "JC",
