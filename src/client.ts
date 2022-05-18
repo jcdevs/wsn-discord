@@ -57,11 +57,20 @@ client.on('messageCreate', async message => {
 			if (!channels.size) {
 				// default to the destination channels associated with author's roles if no channels were mentioned
 				const roles = message.member?.roles.cache;
+				const mentionedRoles = message.mentions.roles;
 
-				if (roles) {
-					const authorRoleIds = [...roles.keys()];
+				let roleIds: string[] = [];
+				if (roles && roles.size) {
+					roleIds = [ ...roles.keys() ];
+				}
+				if (mentionedRoles && mentionedRoles.size) {
+					// override assigned roles with mentioned roles
+					roleIds = [ ...mentionedRoles.keys() ];
+				}
+
+				if (roleIds.length) {
 					const mappings = await AutoforwardRoleDestination.findAll({
-						where: { roleId: { [Op.in]: authorRoleIds } }
+						where: { roleId: { [Op.in]: roleIds } }
 					});
 					const channelIds = mappings.map(record => record.channelId);
 
